@@ -13,7 +13,14 @@ interface DomainGoal {
   priorities: string[]
 }
 
-const domainQuestions = {
+interface DomainQuestions {
+  currentStatus: string
+  goals: string
+  timeline: string
+  priorities: string
+}
+
+const domainQuestions: Record<string, DomainQuestions> = {
   career: {
     currentStatus: "What's your current career situation?",
     goals: "What are your career goals?",
@@ -56,6 +63,18 @@ export function DomainDetailsForm() {
   useEffect(() => {
     if (selectedDomains.length > 0) {
       setCurrentDomain(selectedDomains[0])
+      // Initialize domain data for all selected domains
+      const initialData = selectedDomains.reduce((acc, domainId) => ({
+        ...acc,
+        [domainId]: {
+          domainId,
+          currentStatus: "",
+          goals: [],
+          timeline: "",
+          priorities: []
+        }
+      }), {})
+      setDomainData(initialData)
     } else {
       router.push("/onboarding/domains")
     }
@@ -63,6 +82,8 @@ export function DomainDetailsForm() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
+    if (!currentDomain || !domainData[currentDomain]) return
+
     setDomainDetails(currentDomain, domainData[currentDomain])
     const nextDomain = getNextDomain()
     if (nextDomain) {
@@ -87,7 +108,11 @@ export function DomainDetailsForm() {
     }))
   }
 
-  const questions = domainQuestions[currentDomain as keyof typeof domainQuestions]
+  if (!currentDomain || !domainQuestions[currentDomain]) {
+    return null
+  }
+
+  const questions = domainQuestions[currentDomain]
 
   return (
     <div className="min-h-screen bg-black text-white p-4">
