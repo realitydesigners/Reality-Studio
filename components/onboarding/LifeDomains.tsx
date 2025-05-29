@@ -2,7 +2,7 @@
 
 import { motion } from "framer-motion"
 import { useRouter } from "next/navigation"
-import { useState } from "react"
+import { useState, useMemo } from "react"
 import { useOnboardingStore } from "@/lib/store"
 
 interface Domain {
@@ -55,20 +55,21 @@ export function LifeDomains() {
   const router = useRouter()
   const setSelectedDomains = useOnboardingStore((state) => state.setSelectedDomains)
   const [domains, setDomains] = useState<Domain[]>(initialDomains)
-  const [selectedCount, setSelectedCount] = useState(0)
+  
+  // Calculate selected count based on actual domains state
+  const selectedCount = useMemo(() => 
+    domains.filter(domain => domain.selected).length,
+    [domains]
+  )
 
   const toggleDomain = (id: string) => {
-    setDomains(prev => {
-      const newDomains = prev.map(domain => {
-        if (domain.id === id) {
-          const newSelected = !domain.selected
-          setSelectedCount(prev => newSelected ? prev + 1 : prev - 1)
-          return { ...domain, selected: newSelected }
-        }
-        return domain
-      })
-      return newDomains
-    })
+    setDomains(prev => 
+      prev.map(domain => 
+        domain.id === id 
+          ? { ...domain, selected: !domain.selected }
+          : domain
+      )
+    )
   }
 
   const handleContinue = () => {
