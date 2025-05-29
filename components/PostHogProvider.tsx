@@ -1,53 +1,68 @@
 "use client"
 
-import posthog from "posthog-js"
-import { PostHogProvider as PHProvider, usePostHog } from "posthog-js/react"
-import { Suspense, useEffect } from "react"
+import { createContext, useContext, useEffect, useState } from "react"
 import { usePathname, useSearchParams } from "next/navigation"
+import { Suspense } from "react"
+
+// Create a simple analytics context
+const AnalyticsContext = createContext<{
+  track: (event: string, properties?: Record<string, any>) => void
+}>({
+  track: () => {}
+})
 
 export function PostHogProvider({ children }: { children: React.ReactNode }) {
+  const [isInitialized, setIsInitialized] = useState(false)
+
   useEffect(() => {
-    posthog.init(process.env.NEXT_PUBLIC_POSTHOG_KEY!, {
-      api_host: "/ingest",
-      ui_host: "https://us.posthog.com",
-      capture_pageview: false, // We capture pageviews manually
-      capture_pageleave: true, // Enable pageleave capture
-      capture_exceptions: true, // This enables capturing exceptions using Error Tracking, set to false if you don't want this
-      debug: process.env.NODE_ENV === "development",
-    })
+    // Log initialization attempt
+    console.log('Analytics initialization attempted')
+    setIsInitialized(true)
   }, [])
 
+  const track = (event: string, properties?: Record<string, any>) => {
+    if (process.env.NODE_ENV === 'development') {
+      console.log('Analytics Event:', event, properties)
+    }
+    // TODO: Implement actual analytics tracking when PostHog is ready
+  }
+
   return (
-    <PHProvider client={posthog}>
-      <SuspendedPostHogPageView />
+    <AnalyticsContext.Provider value={{ track }}>
+      <SuspendedAnalyticsPageView />
       {children}
-    </PHProvider>
+    </AnalyticsContext.Provider>
   )
 }
 
-function PostHogPageView() {
+function AnalyticsPageView() {
   const pathname = usePathname()
   const searchParams = useSearchParams()
-  const posthog = usePostHog()
+  const { track } = useContext(AnalyticsContext)
 
   useEffect(() => {
-    if (pathname && posthog) {
+    if (pathname) {
       let url = window.origin + pathname
       const search = searchParams.toString()
       if (search) {
         url += "?" + search
       }
-      posthog.capture("$pageview", { "$current_url": url })
+      track("$pageview", { "$current_url": url })
     }
-  }, [pathname, searchParams, posthog])
+  }, [pathname, searchParams, track])
 
   return null
 }
 
-function SuspendedPostHogPageView() {
+function SuspendedAnalyticsPageView() {
   return (
     <Suspense fallback={null}>
-      <PostHogPageView />
+      <AnalyticsPageView />
     </Suspense>
   )
+}
+
+// Export a hook for using analytics
+export function useAnalytics() {
+  return useContext(AnalyticsContext)
 }
